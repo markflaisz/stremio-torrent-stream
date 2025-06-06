@@ -1,15 +1,50 @@
-services:
-  stremio-addon-server:
-    image: nyakaspeter/stremio-torrent-stream:latest
-    container_name: stremio-addon-server
-    ports:
-      - 58827:58827
-      - 58828:58828
-    restart: unless-stopped
+name: stremio-torrent-stream
 
-  jackett:
-    image: lscr.io/linuxserver/jackett:latest
-    container_name: jackett
-    ports:
-      - 9117:9117
+services:
+  stremio-torrent-stream:
+    image: markflaisz/stremio-torrent-stream:latest
+    container_name: stremio-torrent-stream
+    hostname: stremio-torrent-stream
+    network_mode: bridge
     restart: unless-stopped
+    ports:
+      - target: 58827
+        published: "58827"
+        protocol: tcp
+      - target: 58828
+        published: "58828"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/
+        target: /data
+    deploy:
+      resources:
+        limits:
+          memory: 3997M
+    cpu_shares: 90
+    environment:
+      - TZ=Europe/Budapest
+      - DOWNLOAD_SPEED_MBPS=20
+      - UPLOAD_SPEED_MBPS=1
+      - SEED_TIME_HOURS=48
+      - TORRENT_TIMEOUT_SECONDS=5
+      - MAX_CONNS_PER_TORRENT=50
+    labels:
+      icon: https://github.com/markflaisz/stremio-torrent-stream/blob/main/assets/stremio-torrent-stream.png?raw=true
+    devices: []
+    cap_add: []
+    privileged: false
+
+x-casaos:
+  author: markflaisz
+  category: self
+  hostname: 192-168-0-2.local-ip.medicmobile.org
+  icon: https://github.com/markflaisz/stremio-torrent-stream/blob/main/assets/stremio-torrent-stream.png?raw=true
+  index: /
+  is_uncontrolled: false
+  port_map: "58828"
+  scheme: https
+  store_app_id: stremio-torrent-stream
+  title:
+    custom: Stremio Torrent Stream
