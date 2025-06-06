@@ -10,6 +10,8 @@ import {
 } from "./torrent/webtorrent.js";
 import { getStreamingMimeType } from "./utils/file.js";
 
+import { log, dedupedLog } from "./utils/logger.js";
+
 export const router = Router();
 
 router.get("/stats", (req, res) => {
@@ -49,6 +51,7 @@ router.get("/torrent/:torrentUri", async (req, res) => {
 });
 
 router.get("/stream/:torrentUri/:filePath", async (req, res) => {
+  dedupedLog(`stream:${req.originalUrl}`, `Stream request: ${req.originalUrl}`);
   const { torrentUri, filePath } = req.params;
 
   const torrent = await getOrAddTorrent(torrentUri);

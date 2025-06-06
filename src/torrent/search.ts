@@ -37,6 +37,8 @@ export interface TorrentSearchOptions {
   };
 }
 
+import { log, dedupedLog } from "../utils/logger.js";
+
 export interface TorrentSearchResult {
   name: string;
   tracker: string;
@@ -170,7 +172,7 @@ export const searchTorrents = async (
 
   const results = (await Promise.all(promises)).flat();
 
-  console.log(`Search: got ${results.length} results for ${query}`);
+  dedupedLog(`search:${query}`, `Search triggered: ${query} (${results.length} results)`);
 
   return results;
 };
