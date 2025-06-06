@@ -12,6 +12,7 @@ import { getTitles } from "../utils/imdb.js";
 import { guessLanguage } from "../utils/language.js";
 import { guessQuality } from "../utils/quality.js";
 import { isFileNameMatch, isTorrentNameMatch } from "../utils/shows.js";
+import crypto from "crypto";
 
 interface HandlerArgs {
   type: string;
@@ -104,7 +105,7 @@ export const streamHandler = async ({ type, id, config, req }: HandlerArgs) => {
   let streams = (
     await Promise.all(
       torrents.map((torrent) =>
-        getStreamsFromTorrent(req, torrent, season, episode)
+        getStreamsFromTorrent(req, torrent, id, season, episode)
       )
     )
   ).flat();
@@ -131,6 +132,7 @@ const dedupeTorrents = (torrents: TorrentSearchResult[]) => {
 export const getStreamsFromTorrent = async (
   req: Request,
   torrent: TorrentSearchResult,
+  id: string,
   season?: string,
   episode?: string
 ): Promise<
@@ -185,7 +187,7 @@ export const getStreamsFromTorrent = async (
     ].join("\n");
 
     const streamEndpoint = `${req.protocol}://${req.get("host")}/stream`;
-
+  
     const url = [
       streamEndpoint,
       encodeURIComponent(uri),
@@ -211,6 +213,10 @@ export const getStreamsFromTorrent = async (
         behaviorHints: {
           bingeGroup: torrent.name,
         },
+        scrobble: {
+          videoHash: crypto.createHash("md5").update(`${torrentInfo.infoHash}:${file.path}`).digest("hex"),
+          videoId: id,
+        } 
       },
       torrentName: torrent.name,
       fileName: file.name,
