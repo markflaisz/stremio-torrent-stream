@@ -1,0 +1,13 @@
+diff --git a/src/main.ts b/src/main.ts
+index 6cce22c60282df37dee7fbf4ad8fcb34f2678653..3b18878417c7460fb8c7ca2a5046bd542c24398e 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -208,7 +208,7 @@ function transformToEpisode($: CheerioAPI, episode: Element) {
+         title: $(episode).find('td:nth-child(2)').text()?.replace(/\n/g, ''),
+         magnet: $(episode).find('td:nth-child(3) .magnet').attr('href')?.replace(/\n/g, ''),
+         torrent: $(episode).find('td:nth-child(3) .download_1').attr('href')?.replace(/\n/g, ''),
+-        size: bytes($(episode).find('td:nth-child(4)').text()),
++        size: bytes($(episode).find('td:nth-child(4)').text()) || 0,
+         released: $(episode).find('td:nth-child(5)').text(),
+         seeds: parseInt($(episode).find('td:nth-child(6)').text()) || 0
+     }
