@@ -168,15 +168,15 @@ export const getStreamsFromTorrent = async (
 
   const torrentQuality = guessQuality(torrent.name);
   const language = guessLanguage(torrent.name, torrent.category);
-
+  
   // @ts-ignore
-  return videos.map((file) => {
+   return videos.map((file) => {
     const fileQuality = guessQuality(file.name);
 
     const { quality, score } =
       fileQuality.score > torrentQuality.score ? fileQuality : torrentQuality;
 
-    const description = [
+   const description = [
       ...(season && episode ? [torrent.name, file.name] : [torrent.name]),
       [
         `💾 ${getReadableSize(file.size)}`,
@@ -187,7 +187,7 @@ export const getStreamsFromTorrent = async (
     ].join("\n");
 
     const streamEndpoint = `${req.protocol}://${req.get("host")}/stream`;
-  
+
     const url = [
       streamEndpoint,
       encodeURIComponent(uri),
@@ -204,6 +204,10 @@ export const getStreamsFromTorrent = async (
       lang: sub.name,
     }));
 
+    const cleanPath = file.path.split("/").pop();
+    const hashInput = `${torrent.name}:${cleanPath}`;
+    const videoHash = crypto.createHash("md5").update(hashInput).digest("hex");
+
     return {
       stream: {
         name: quality,
@@ -214,9 +218,9 @@ export const getStreamsFromTorrent = async (
           bingeGroup: torrent.name,
         },
         scrobble: {
-          videoHash: crypto.createHash("md5").update(`${torrentInfo.infoHash}:${file.path}`).digest("hex"),
+          videoHash,
           videoId: id,
-        } 
+        },
       },
       torrentName: torrent.name,
       fileName: file.name,
@@ -248,6 +252,6 @@ const isAllowedFormat = (config: HandlerArgs["config"], name: string) => {
     if (str.includes("x265") || str.includes("h265") || str.includes("hevc"))
       return false;
   }
-
+  
   return true;
 };

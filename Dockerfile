@@ -49,4 +49,4 @@ USER node
 EXPOSE 58827
 EXPOSE 58828
 
-CMD npm start
+CMD ["npm", "start"]
