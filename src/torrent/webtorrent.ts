@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import WebTorrent, { Torrent } from "webtorrent";
 import { getReadableDuration } from "../utils/file.js";
+import { remote as parseTorrent, Instance } from 'parse-torrent';
 
 interface FileInfo {
   name: string;
@@ -37,6 +38,8 @@ interface ActiveTorrentInfo extends TorrentInfo {
 
 // Timezone-based logging with proper timestamp placement
 import { log, dedupedLog } from "../utils/logger.js";
+const TIMEZONE = process.env.TZ || "Europe/Budapest";
+const LOCALE = "hu-HU";
 
 // Directory to store torrent files
 const TORRENT_DIR =
@@ -67,12 +70,12 @@ const UPLOAD_SPEED_LIMIT =
 const TORRENT_TIMEOUT =
   (Number(process.env.TORRENT_TIMEOUT_SECONDS) || 5) * 1000;
 
-const infoClient = new WebTorrent();
 const streamClient = new WebTorrent({
   // @ts-ignore
   downloadLimit: DOWNLOAD_SPEED_LIMIT,
   uploadLimit: UPLOAD_SPEED_LIMIT,
   maxConns: MAX_CONNS_PER_TORRENT,
+  dht: false,
 });
 
 streamClient.on("torrent", (torrent) => {
@@ -87,8 +90,6 @@ streamClient.on("error", (error) => {
     console.error(`Error: ${error.message}`);
   }
 });
-
-infoClient.on("error", () => {});
 
 const launchTime = Date.now();
 
@@ -119,8 +120,8 @@ export const getStats = () => ({
 });
 
 let timeout: NodeJS.Timeout;
-export const getOrAddTorrent = (uri: string) =>
-  new Promise<Torrent | undefined>((resolve) => {
+export const getOrAddTorrent = (uri: string): Promise<Torrent | undefined> =>
+new Promise<Torrent | undefined>((resolve) => {
     const torrent = streamClient.add(
       uri,
       {
@@ -142,8 +143,16 @@ export const getOrAddTorrent = (uri: string) =>
 
         if (!fs.existsSync(metaPath)) {
           const addedAt = Date.now();
+          const addedAtFormatted = new Date(addedAt).toLocaleString(LOCALE, {
+          timeZone: TIMEZONE,
+          hour12: false,
+          });
           try {
-          fs.writeJsonSync(metaPath, { addedAt });
+          fs.writeJsonSync(metaPath,{ 
+            addedAt,
+            addedAtFormatted,
+            name: torrent.name 
+          });
           log(`Metadata saved: ${metaPath}`);
           } 
           catch (e) { 
@@ -164,36 +173,27 @@ export const getFile = (torrent: Torrent, path: string) =>
   torrent.files.find((file) => file.path === path);
 
 export const getTorrentInfo = async (uri: string) => {
-  const getInfo = (torrent: Torrent): TorrentInfo => ({
+  const getInfo = (torrent: Instance): TorrentInfo => ({
     name: torrent.name,
     infoHash: torrent.infoHash,
     size: torrent.length,
-    files: torrent.files.map((file) => ({
+    files: torrent.files?.map((file) => ({
       name: file.name,
       path: file.path,
       size: file.length,
-    })),
+    }))?? [],
   });
   
   let timeout: NodeJS.Timeout;
-  return await new Promise<TorrentInfo | undefined>((resolve) => {
-    const torrent = infoClient.add(
-      uri,
-      { store: MemoryStore, destroyStoreOnDestroy: false },
-      (torrent) => {
-        clearTimeout(timeout);
-        const info = getInfo(torrent);
-        //dedupedLog(`fetched:${torrent.infoHash}`, `Fetched info: ${info.name}`);
-        torrent.destroy();
-        resolve(info);
-      }
-    );
-
-    timeout = setTimeout(() => {
-      torrent.destroy();
-      resolve(undefined);
-    }, TORRENT_TIMEOUT);
+  const torrentInstance = await new Promise<Instance>((resolve, reject) => {
+    parseTorrent(uri, (err, parsedTorrent) => {
+      if (err) return reject(err);
+      resolve(parsedTorrent);
+    })
   });
+
+    return getInfo(torrentInstance);
+  
 };
 
 const timeouts = new Map<string, NodeJS.Timeout>();
@@ -267,12 +267,10 @@ export const restoreSavedTorrents = () => {
           deselect: true,
         },
         (torrent) => {
-          log(`Restored seeding: ${torrent.name}`);
-
           const elapsed = Date.now() - addedAt;
           const remaining = SEED_TIME - elapsed;
-          const readableAddedAt = new Date(addedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
-          const readableExpiresAt = new Date(addedAt + SEED_TIME).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
+          const readableAddedAt = new Date(addedAt).toLocaleString(LOCALE, { timeZone: TIMEZONE });
+          const readableExpiresAt = new Date(addedAt + SEED_TIME).toLocaleString(LOCALE, { timeZone: TIMEZONE });
           
           dedupedLog(
            `seedcheck:${infoHash}`,
@@ -311,7 +309,7 @@ export const restoreSavedTorrents = () => {
 
   log(`Restored: ${torrentFiles.length} .torrent file(s) from disk.`);
 };
-//Application startup
+
 restoreSavedTorrents();
 
 setInterval(() => {
