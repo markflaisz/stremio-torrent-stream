@@ -9,7 +9,7 @@ import {
 import { getTorrentInfo } from "../torrent/webtorrent.js";
 import { getReadableSize, isSubtitleFile, isVideoFile } from "../utils/file.js";
 import { getTitles } from "../utils/imdb.js";
-import { guessLanguage } from "../utils/language.js";
+import { guessLanguages } from "../utils/language.js";
 import { guessQuality } from "../utils/quality.js";
 import { isFileNameMatch, isTorrentNameMatch } from "../utils/shows.js";
 import crypto from "crypto";
@@ -84,6 +84,18 @@ export const streamHandler = async ({ type, id, config, req }: HandlerArgs) => {
   ).flat();
 
   torrents = dedupeTorrents(torrents);
+
+  torrents.sort((a, b) => {
+    const qa = guessQuality(a.name).score;
+    const qb = guessQuality(b.name).score;
+
+    if (qb !== qa) return qb - qa;
+
+    const sizeA = a.size || 0;
+    const sizeB = b.size || 0;
+
+    return sizeA - sizeB;
+  });
 
   torrents = torrents.filter((torrent) => {
     if (!torrent.seeds) return false;
@@ -167,23 +179,28 @@ export const getStreamsFromTorrent = async (
   const subs = torrentInfo.files.filter((file) => isSubtitleFile(file.name));
 
   const torrentQuality = guessQuality(torrent.name);
-  const language = guessLanguage(torrent.name, torrent.category);
-  
-  // @ts-ignore
-   return videos.map((file) => {
+  const languages = guessLanguages(torrent.name, torrent.category);
+
+ // @ts-ignore
+  return videos.map((file) => {
     const fileQuality = guessQuality(file.name);
 
     const { quality, score } =
       fileQuality.score > torrentQuality.score ? fileQuality : torrentQuality;
 
-   const description = [
-      ...(season && episode ? [torrent.name, file.name] : [torrent.name]),
+    const description = [
+      ...(season && episode 
+      ? [torrent.name, `Season:${season.padStart(2, "0")} Episode:${episode.padStart(2, "0")}`]
+    : [torrent.name]),
       [
         `💾 ${getReadableSize(file.size)}`,
+        `${languages}`,
+      ].join(" "),
+      [
+        `⚙️ ${torrent.tracker}`,
         `⬆️ ${torrent.seeds}`,
         `⬇️ ${torrent.peers}`,
       ].join(" "),
-      [`🔊 ${language}`, `⚙️ ${torrent.tracker}`].join(" "),
     ].join("\n");
 
     const streamEndpoint = `${req.protocol}://${req.get("host")}/stream`;
@@ -252,6 +269,6 @@ const isAllowedFormat = (config: HandlerArgs["config"], name: string) => {
     if (str.includes("x265") || str.includes("h265") || str.includes("hevc"))
       return false;
   }
-  
+
   return true;
 };

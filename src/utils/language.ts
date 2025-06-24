@@ -1,16 +1,38 @@
-export const guessLanguage = (name: string, category?: string) => {
-  if (category?.includes("HU")) return "Hungarian";
+export const guessLanguages = (name: string, category?: string) => {
+  const languages = new Set<string>();
+  if (category?.includes("HU")) languages.add("🇭🇺 HUN");
+  if (category?.includes("EN")) languages.add("🇬🇧 ENG");
 
-  const split = name
-    .toLowerCase()
-    .replace(/\W/g, " ")
-    .replace("x", " ")
-    .split(" ");
+ const languageMap: Record<string, { flag: string; code: string }> = {
+    hun: { flag: "🇭🇺", code: "HUN" },
+    hungarian: { flag:  "🇭🇺", code: "HUN" },
+    ger: { flag:  "🇩🇪", code: "GER" },
+    german: { flag:  "🇩🇪", code: "GER" },
+    fre: { flag:  "🇫🇷", code: "FRE" },
+    french: { flag:  "🇫🇷", code: "FRE" },
+    ita: { flag:  "🇮🇹", code: "ITA" },
+    italian: { flag:  "🇮🇹", code: "ITA" },
+    eng: { flag:  "🇬🇧", code: "ENG" },
+    english: { flag:  "🇬🇧", code: "ENG" },
+    rus: { flag:  "🇷🇺", code: "RUS" },
+    russian: { flag:  "🇷🇺", code: "RUS" },
+    spa: { flag:  "🇪🇸", code: "SPA" },
+    spanish: { flag:  "🇪🇸", code: "SPA" },
+    multi: { flag:  "🌍", code: "MULTI" },
+  };
 
-  if (split.includes("hun") || split.includes("hungarian")) return "Hungarian";
-  if (split.includes("ger") || split.includes("german")) return "German";
-  if (split.includes("fre") || split.includes("french")) return "French";
-  if (split.includes("ita") || split.includes("italian")) return "Italian";
+  const regex = new RegExp(Object.keys(languageMap).join("|"), "gi");
+  const matches = name.toLowerCase().match(regex);
 
-  return "English";
+  if (matches) {
+   matches.forEach((match) =>{
+    const lang = languageMap[match.toLowerCase()];
+    if (lang) languages.add(`${lang.flag} ${lang.code}`);
+    });
+  } 
+  else {
+    languages.add("🇬🇧 ENG");
+  }
+
+  return [...languages].join(" / ");
 };
