@@ -1,56 +1,36 @@
-export const guessSeasonEpisode = (name: string) => {
-  const str = name.replace(/\W/g, " ").toLowerCase();
-
-  const seasonMatch = [...str.matchAll(/[s](?<season>\d+)/g)];
-  const episodeMatch = str.match(/[e](?<episode>\d+)/);
-
-  if (seasonMatch.length === 0 && str.includes("complete")) {
-    return { completeSeries: true };
-  } else if (seasonMatch.length === 1 && !episodeMatch) {
-    const season = Number(seasonMatch[0].groups?.season) || 0;
-    return { seasons: [season] };
-  } else if (seasonMatch.length > 1) {
-    const firstSeason = Number(seasonMatch[0].groups?.season) || 0;
-    const lastSeason =
-      Number(seasonMatch[seasonMatch.length - 1].groups?.season) || 0;
-    const seasons = [];
-    for (let i = firstSeason; i <= lastSeason; i++) seasons.push(i);
-    return { seasons };
-  } else if (seasonMatch[0] || episodeMatch) {
-    const season = Number(seasonMatch[0]?.groups?.season) || undefined;
-    const episode = Number(episodeMatch?.groups?.episode) || undefined;
-    return { season, episode };
-  } else {
-    const seasonEpisodeMatch = str.match(/(?<season>\d+)x(?<episode>\d+)/);
-    const season = Number(seasonEpisodeMatch?.groups?.season) || undefined;
-    const episode = Number(seasonEpisodeMatch?.groups?.episode) || undefined;
-    return { season, episode };
-  }
-};
-
-export const isTorrentNameMatch = (
+export function matchEpisodePatterns(
   name: string,
   season: number,
   episode: number
-) => {
-  const guess = guessSeasonEpisode(name);
-  if (guess.completeSeries) return true;
-  if (guess.seasons?.includes(season)) return true;
-  if (guess.season === season && guess.episode === episode) return true;
-  if (season === 0) {
-    if (name.toLowerCase().includes("special")) return true;
-    if (guess.season === undefined && guess.seasons === undefined) return true;
-  }
-  return false;
-};
+): boolean {
+  const lower = name.toLowerCase();
 
-export const isFileNameMatch = (
-  name: string,
-  season: number,
-  episode: number
-) => {
-  const guess = guessSeasonEpisode(name);
-  if (guess.season === season && guess.episode === episode) return true;
-  if (season === 0) return true;
-  return false;
-};
+  const s = season;
+  const e = episode;
+  const sPad = season.toString().padStart(2, "0");
+  const ePad = episode.toString().padStart(2, "0");
+
+  const patterns: RegExp[] = [
+
+    new RegExp(`s0?${s}[^a-z0-9]?e0?${e}(?!\\d)`, "i"),
+
+    new RegExp(`${s}[^a-z0-9]?x0?${e}(?!\\d)`, "i"),
+
+    new RegExp(
+      `${s}\\s*\\.\\s*${e}\\s*\\.\\s*(resz|rész)`,
+      "i"
+    ),
+    new RegExp(
+      `${s}\\s*(evad|évad)[^0-9]*0?${e}\\s*(resz|rész)`,
+      "i"
+    ),
+    new RegExp(
+      `${s}\\s*(evad|évad)[^0-9]*${e}\\s*(resz|rész)`,
+      "i"
+    ),
+
+    new RegExp(`\\b${sPad}${ePad}\\b`, "i"),
+  ];
+
+  return patterns.some((re) => re.test(lower));
+}

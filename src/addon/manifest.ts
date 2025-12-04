@@ -12,7 +12,7 @@ export const manifest: Manifest = {
     "https://i.etsystatic.com/35367581/r/il/53bf97/4463935832/il_fullxfull.4463935832_3k3g.jpg",
   description:
     "This addon enables Stremio to stream movies and shows from torrents",
-  idPrefixes: ["tt"],
+  idPrefixes: ["tt","tmdb"],
   behaviorHints: {
     // @ts-ignore
     configurable: true,
@@ -78,11 +78,6 @@ export const manifest: Manifest = {
     {
       title: "Enable EZTV search",
       key: "enableEztv",
-      type: "checkbox",
-    },
-    {
-      title: "Use titles for torrent search",
-      key: "searchByTitle",
       type: "checkbox",
     },
     {

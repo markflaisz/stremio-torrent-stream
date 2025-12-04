@@ -224,13 +224,19 @@ export const streamClosed = (hash: string, fileName: string) => {
   timeout = setTimeout(async () => {
     const torrent = streamClient.get(hash);
     // @ts-ignore
-    torrent?.destroy(undefined, () => {
+    if (torrent && typeof torrent.destroy === 'function') {
+    torrent.destroy(undefined, () => {
       log(`Removed torrent: ${torrent.name}`);
       timeouts.delete(hash);
     });
-  }, SEED_TIME);
+  } else {
+    log(`Warning: torrent is invalid or destroy() is not a function`);
+    timeouts.delete(hash);
+  }
 
-  timeouts.set(hash, timeout);
+}, SEED_TIME);
+
+timeouts.set(hash, timeout);
 };
 
 export const restoreSavedTorrents = () => {
