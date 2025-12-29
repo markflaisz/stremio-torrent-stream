@@ -81,6 +81,12 @@ export const manifest: Manifest = {
       type: "checkbox",
     },
     {
+      title: "Hide English-only streams if Hungarian is available",
+      key: "hideEnglishIfHun",
+      type: "checkbox",
+      default: "checked",
+    },
+    {
       title: "Do not show HDR results",
       key: "disableHdr",
       type: "checkbox",

@@ -30,8 +30,8 @@ export const guessLanguages = (name: string, category?: string) => {
     if (lang) languages.add(`${lang.flag} ${lang.code}`);
     });
   } 
-  else {
-    languages.add("🇬🇧 ENG");
+  if (languages.size === 0) {
+    languages.add("❓ Ismeretlen");
   }
 
   return [...languages].join(" / ");

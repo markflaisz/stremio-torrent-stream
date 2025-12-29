@@ -30,6 +30,7 @@ interface HandlerArgs {
     enableItorrent: string;
     enableYts: string;
     enableEztv: string;
+    hideEnglishIfHun: string;
     disableHdr: string;
     disableHevc: string;
     disable4k: string;
@@ -86,7 +87,7 @@ function detectSeasonPack(name: string, season?: string) {
 
 function extractHunFlags(languageLabel: string) {
   return {
-    hasHunAudio: languageLabel.includes("🇭🇺 HUN"),
+    hasHunAudio: languageLabel.includes(" HUN"),
     hasHunSub: false,
   };
 }
@@ -289,7 +290,26 @@ export const streamHandler = async ({ type, id, config, req }: HandlerArgs) => {
       if (!prev || s.score > prev.score) map.set(key, s);
     }
     streams = Array.from(map.values());
-  }
+
+    const hasAnyHun = streams.some((s) =>
+      guessLanguages(s.torrentName, s.torrentCategory).includes(" HUN")
+    );
+
+    if (config?.hideEnglishIfHun === "on") {
+      const hasAnyHun = streams.some((s) =>
+        guessLanguages(s.torrentName).includes(" HUN")
+     );
+
+     if (hasAnyHun) {
+      streams = streams.filter((s) => {
+      const label = guessLanguages(s.torrentName, s.torrentCategory);
+      const hasHun = label.includes(" HUN");
+      const hasEng = label.includes(" ENG");
+      return hasHun || !hasEng;
+      });
+     }
+    }
+  };
 
   streams.sort((a, b) => b.score - a.score);
 
@@ -342,6 +362,18 @@ export async function getStreamsFromTorrent(
   const torrentQuality = guessQuality(torrent.name);
   const languages = guessLanguages(torrent.name, torrent.category);
 
+  function stremioLangFromLabel(label: string): string {
+    if (label.includes("HUN")) return "hun";
+    if (label.includes("ENG")) return "eng";
+    if (label.includes("GER")) return "de";
+    if (label.includes("FRE")) return "fr";
+    if (label.includes("ITA")) return "it";
+    if (label.includes("SPA")) return "es";
+    if (label.includes("RUS")) return "ru";
+    if (label.includes("MULTI")) return "und";
+    return "und";
+  }
+
   return videos.map((file) => {
     const fileQuality = guessQuality(file.name);
     const bestQuality = fileQuality.score > torrentQuality.score ? fileQuality : torrentQuality;
@@ -363,7 +395,7 @@ export async function getStreamsFromTorrent(
     const subtitles = subs.map((sub, index) => ({
       id: index.toString(),
       url: [base, encodeURIComponent(uri), encodeURIComponent(sub.path)].join("/"),
-      lang: sub.name,
+      lang: stremioLangFromLabel(guessLanguages(sub.name)),
     }));
 
     const cleanPath = file.path.split("/").pop() || file.path;
@@ -387,6 +419,7 @@ export async function getStreamsFromTorrent(
       },
       torrentName: torrent.name,
       fileName: file.name,
+      torrentCategory: torrent.category,
       quality: bestQuality.quality,
       score: finalScore,
     };
