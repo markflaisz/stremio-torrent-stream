@@ -3,7 +3,7 @@ export const guessLanguages = (name: string, category?: string) => {
   if (category?.includes("HU")) languages.add("🇭🇺 HUN");
   if (category?.includes("EN")) languages.add("🇬🇧 ENG");
 
- const languageMap: Record<string, { flag: string; code: string }> = {
+  const languageMap: Record<string, { flag: string; code: string }> = {
     hun: { flag: "🇭🇺", code: "HUN" },
     hungarian: { flag:  "🇭🇺", code: "HUN" },
     ger: { flag:  "🇩🇪", code: "GER" },
@@ -21,15 +21,30 @@ export const guessLanguages = (name: string, category?: string) => {
     multi: { flag:  "🌍", code: "MULTI" },
   };
 
+  const lower = name.toLowerCase();
+
+  const hasHungarianSubtitleHint =
+    /\bhun\s*sub\b/.test(lower) ||
+    /\bhu\s*sub\b/.test(lower) ||
+    /\bhunsub\b/.test(lower) ||
+    /\bsubhun\b/.test(lower) ||
+    /\bsubs?\b/.test(lower) && (/\bhun\b/.test(lower) || /\bhungarian\b/.test(lower) || /\bhu\b/.test(lower));
+
   const regex = new RegExp(Object.keys(languageMap).join("|"), "gi");
-  const matches = name.toLowerCase().match(regex);
+  const matches = lower.match(regex);
 
   if (matches) {
-   matches.forEach((match) =>{
-    const lang = languageMap[match.toLowerCase()];
-    if (lang) languages.add(`${lang.flag} ${lang.code}`);
+    matches.forEach((match) =>{
+      const key = match.toLowerCase();
+
+      if (hasHungarianSubtitleHint && (key === "hun" || key === "hungarian")) {
+        return;
+      }
+
+      const lang = languageMap[key];
+      if (lang) languages.add(`${lang.flag} ${lang.code}`);
     });
-  } 
+  }
   if (languages.size === 0) {
     languages.add("❓ Ismeretlen");
   }
